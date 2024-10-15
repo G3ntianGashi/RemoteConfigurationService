@@ -20,6 +20,7 @@ namespace DotnetAPI.Services
             string sql = @"EXEC RemoteConfigurationSchema.spUser_Upsert
                 @UserId = @UserIdParameter,
                 @Email = @EmailParameter,
+                @ApiKey = @ApiKeyParameter,
                 @Active = @ActiveParameter,
                 @FirstName = @FirstNameParameter, 
                 @LastName = @LastNameParameter";
@@ -27,6 +28,7 @@ namespace DotnetAPI.Services
             DynamicParameters sqlParameters = new DynamicParameters();
             sqlParameters.Add("@UserIdParameter", user.UserId, DbType.Int32);
             sqlParameters.Add("@EmailParameter", user.Email, DbType.String);
+            sqlParameters.Add("@ApiKeyParameter", user.ApiKey, DbType.Guid);
             sqlParameters.Add("@ActiveParameter", user.Active, DbType.Boolean);
             sqlParameters.Add("@FirstNameParameter", user.FirstName, DbType.String);
             sqlParameters.Add("@LastNameParameter", user.LastName, DbType.String);

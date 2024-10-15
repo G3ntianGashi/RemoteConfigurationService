@@ -7,9 +7,10 @@ CREATE OR ALTER PROCEDURE RemoteConfigurationSchema.spUsers_Get
 AS
 BEGIN
     SELECT [Users].[UserId],
+        [Users].[Email],
+		[Users].[ApiKey],
         [Users].[FirstName],
         [Users].[LastName],
-        [Users].[Email],
         [Users].[Active]
     FROM RemoteConfigurationSchema.Users AS Users 
         WHERE Users.UserId = ISNULL(@UserId, Users.UserId)
@@ -55,6 +56,7 @@ GO
 
 CREATE OR ALTER PROCEDURE RemoteConfigurationSchema.spUser_Upsert
     @Email NVARCHAR(50),
+	@ApiKey UNIQUEIDENTIFIER,
     @FirstName NVARCHAR(50),
 	@LastName NVARCHAR(50),
     @UserId INT = NULL,
@@ -62,34 +64,28 @@ CREATE OR ALTER PROCEDURE RemoteConfigurationSchema.spUser_Upsert
 AS
 BEGIN
     IF NOT EXISTS (SELECT * FROM RemoteConfigurationSchema.Users WHERE UserId = @UserId)
-        BEGIN
+    BEGIN
         IF NOT EXISTS (SELECT * FROM RemoteConfigurationSchema.Users WHERE Email = @Email)
-            BEGIN
-                DECLARE @OutputUserId INT
-
-                INSERT INTO RemoteConfigurationSchema.Users(
-                    [FirstName],
-                    [LastName],
-                    [Email],
-                    [Active]
-                ) VALUES (
-                    @FirstName,
-                    @LastName,
-                    @Email,
-                    @Active
-                )
-
-                SET @OutputUserId = @@IDENTITY
-            END
-        END
-    ELSE 
         BEGIN
-            UPDATE RemoteConfigurationSchema.Users 
-                SET FirstName = @FirstName,
-                    LastName = @LastName,
-                    Active = @Active
-                WHERE UserId = @UserId
+			DECLARE @OutputUserId INT
+
+			INSERT INTO RemoteConfigurationSchema.Users(
+				[Email],
+				[ApiKey],
+				[FirstName],
+				[LastName],
+				[Active]
+			) VALUES (
+				@Email,
+				@ApiKey,
+				@FirstName,
+				@LastName,
+				@Active
+			)
+
+			SET @OutputUserId = @@IDENTITY
         END
+    END
 END
 GO
 

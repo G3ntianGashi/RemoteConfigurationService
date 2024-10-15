@@ -53,11 +53,13 @@ namespace DotnetAPI.Controllers
                     {
                         AppUser userComplete = _mapper.Map<AppUser>(userForRegistration);
                         userComplete.Active = true;
+                        userComplete.ApiKey = Guid.NewGuid();
 
                         if (_userService.UpsertUser(userComplete))
                         {
                             return Ok();
                         }
+                        
                         throw new Exception("Failed to add user.");
                     }
                     throw new Exception("Failed to register user.");

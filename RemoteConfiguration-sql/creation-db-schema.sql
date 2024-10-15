@@ -11,9 +11,10 @@ DROP TABLE IF EXISTS RemoteConfigurationSchema.Users
 CREATE TABLE RemoteConfigurationSchema.Users
 (
     UserId INT IDENTITY(1, 1) PRIMARY KEY
+	, Email NVARCHAR(50)
+	, ApiKey UNIQUEIDENTIFIER
     , FirstName NVARCHAR(50)
     , LastName NVARCHAR(50)
-    , Email NVARCHAR(50)
     , Active BIT
 );
 
@@ -25,3 +26,11 @@ CREATE TABLE RemoteConfigurationSchema.Auth
 	PasswordSalt VARBINARY(MAX)
 )
 
+DROP TABLE IF EXISTS RemoteConfigurationSchema.Configuration
+CREATE TABLE RemoteConfigurationSchema.Configuration
+(
+	Id INT IDENTITY(1, 1) PRIMARY KEY
+	, ApiKey UNIQUEIDENTIFIER
+	, KeyIdentifier NVARCHAR(50)
+	, ConfigData NVARCHAR(MAX)
+)
