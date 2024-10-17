@@ -1,11 +1,10 @@
-using AutoMapper;
 using DotnetAPI.Data;
 using DotnetAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Dapper;
 using System.Data;
 using DotnetAPI.Dtos;
-using System.Runtime.InteropServices;
+using DotnetAPI.Services;
 
 namespace DotnetAPI.Controllers
 {
@@ -14,24 +13,19 @@ namespace DotnetAPI.Controllers
     public class ConfigurationController : ControllerBase
     {
         private readonly DataContextDapper _dapper;
-        private readonly IMapper _mapper;
 
         public ConfigurationController(IConfiguration config)
         {
             _dapper = new DataContextDapper(config);
-
-            _mapper = new Mapper(new MapperConfiguration(cfg => 
-            {
-                //cfg.CreateMap<UserForRegistrationDto, AppUser>();
-            }));
         }
 
         [HttpGet("GetConfigurations")]
-        public IActionResult  GetConfigurations([FromQuery]string apiKey)
+        [ServiceFilter(typeof(ApiKeyAttributeService))]
+        public IActionResult  GetConfigurations()
         {
-            if (!Guid.TryParse(apiKey, out Guid parsedApiKey))
+            if (HttpContext.Items["ApiKey"] is not Guid apiKey)
             {
-                // Se la stringa non è un GUID valido, ritorna un errore 400 (Bad Request)
+                // Se non è un GUID, esci o restituisci un errore
                 return BadRequest("Invalid API key format. It should be a valid GUID.");
             }
 
@@ -40,7 +34,7 @@ namespace DotnetAPI.Controllers
                       " WHERE ApiKey = @ApiKey";
 
             DynamicParameters sqlParameters = new DynamicParameters();
-            sqlParameters.Add("@ApiKey", parsedApiKey, DbType.Guid);
+            sqlParameters.Add("@ApiKey", apiKey, DbType.Guid);
 
             IEnumerable<Configuration> configurations = _dapper.LoadDataWithParameters<Configuration>(sql, sqlParameters);
 
@@ -48,11 +42,12 @@ namespace DotnetAPI.Controllers
         }
 
         [HttpGet("GetConfiguration")]
-        public IActionResult GetConfiguration([FromQuery]string apiKey, [FromQuery]string keyIdentifier)
+        [ServiceFilter(typeof(ApiKeyAttributeService))]
+        public IActionResult GetConfiguration([FromQuery]string keyIdentifier)
         {
-            if (!Guid.TryParse(apiKey, out Guid parsedApiKey))
+            if (HttpContext.Items["ApiKey"] is not Guid apiKey)
             {
-                // Se la stringa non è un GUID valido, ritorna un errore 400 (Bad Request)
+                // Se non è un GUID, esci o restituisci un errore
                 return BadRequest("Invalid API key format. It should be a valid GUID.");
             }
 
@@ -62,7 +57,7 @@ namespace DotnetAPI.Controllers
                       " AND KeyIdentifier = @KeyIdentifier";
 
             DynamicParameters sqlParameters = new DynamicParameters();
-            sqlParameters.Add("@ApiKey", parsedApiKey, DbType.Guid);
+            sqlParameters.Add("@ApiKey", apiKey, DbType.Guid);
             sqlParameters.Add("@KeyIdentifier", keyIdentifier, DbType.String);
 
             Configuration configuration = _dapper.LoadDataSingleWithParameters<Configuration>(sql, sqlParameters);
@@ -70,23 +65,26 @@ namespace DotnetAPI.Controllers
             return Ok(configuration);
         }
 
-        [HttpPost("InsertConfiguration")]
-        public IActionResult InsertConfiguration([FromQuery]string apiKey, [FromBody]ConfigurationDto configurationDto)
+        [HttpPost("UpsertConfiguration")]
+        [ServiceFilter(typeof(ApiKeyAttributeService))]
+        public IActionResult UpsertConfiguration([FromBody]ConfigurationDto configurationDto)
         {
-            if (!Guid.TryParse(apiKey, out Guid parsedApiKey))
+            if (HttpContext.Items["ApiKey"] is not Guid apiKey)
             {
-                // Se la stringa non è un GUID valido, ritorna un errore 400 (Bad Request)
+                // Se non è un GUID, esci o restituisci un errore
                 return BadRequest("Invalid API key format. It should be a valid GUID.");
             }
 
-            var sql = "INSERT INTO RemoteConfigurationSchema.Configuration (ApiKey, KeyIdentifier, ConfigData)" 
-                    + " VALUES (@ApiKey, @KeyIdentifier, @ConfigData);";
+            var sql = "EXEC RemoteConfigurationSchema.spConfiguration_Upsert"
+                    + " @ApiKey=@ApiKeyParameter"
+                    + ", @KeyIdentifier=@KeyIdentifierParameter"
+                    + ", @ConfigData=@ConfigDataParameter";
 
             // Parametri per la query
             var parameters = new DynamicParameters();
-            parameters.Add("@ApiKey", parsedApiKey, DbType.Guid);
-            parameters.Add("@KeyIdentifier", configurationDto.KeyIdentifier, DbType.String);
-            parameters.Add("@ConfigData", configurationDto.ConfigData.ToString(), DbType.String);
+            parameters.Add("@ApiKeyParameter", apiKey, DbType.Guid);
+            parameters.Add("@KeyIdentifierParameter", configurationDto.KeyIdentifier, DbType.String);
+            parameters.Add("@ConfigDataParameter", configurationDto.ConfigData.ToString(), DbType.String);
 
             if (_dapper.ExecuteSqlWithParameters(sql, parameters))
             {
@@ -95,6 +93,35 @@ namespace DotnetAPI.Controllers
             else
             {
                 throw new Exception("Failed to insert configuration");
+            }
+        }
+
+        [HttpDelete("DeleteConfiguration")]
+        [ServiceFilter(typeof(ApiKeyAttributeService))]
+        public IActionResult DeleteConfiguration([FromQuery]string keyIdentifier)
+        {
+            if (HttpContext.Items["ApiKey"] is not Guid apiKey)
+            {
+                // Se non è un GUID, esci o restituisci un errore
+                return BadRequest("Invalid API key format. It should be a valid GUID.");
+            }
+            
+            var sql = "DELETE FROM RemoteConfigurationSchema.Configuration"
+                    + " WHERE ApiKey = @ApiKey"
+                    + " AND KeyIdentifier = @KeyIdentifier";
+
+            // Parametri per la query
+            var parameters = new DynamicParameters();
+            parameters.Add("@ApiKey", apiKey, DbType.Guid);
+            parameters.Add("@KeyIdentifier", keyIdentifier, DbType.String);
+
+            if (_dapper.ExecuteSqlWithParameters(sql, parameters))
+            {
+                return Ok();
+            }
+            else
+            {
+                throw new Exception("Failed to delete configuration");
             }
         }
     }

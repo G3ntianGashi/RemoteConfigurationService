@@ -54,5 +54,11 @@ namespace DotnetAPI.Data
             IDbConnection dbConnection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
             return dbConnection.QuerySingle<T>(sql, parameters);
         }
+
+        public async Task<int> LoadDataWithRowCount(string sql, DynamicParameters parameters)
+        {
+            IDbConnection dbConnection = new SqlConnection(_config.GetConnectionString("DefaultConnection"));
+            return await dbConnection.QuerySingleAsync<int>(sql, parameters);
+        }
     }
 }

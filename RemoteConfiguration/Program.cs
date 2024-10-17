@@ -1,4 +1,5 @@
 using System.Text;
+using DotnetAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -42,6 +43,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 ValidateAudience = false
             };
         });
+
+builder.Services.AddScoped<ApiKeyAttributeService>();
 
 var app = builder.Build();
 

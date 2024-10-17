@@ -63,28 +63,25 @@ CREATE OR ALTER PROCEDURE RemoteConfigurationSchema.spUser_Upsert
     @Active BIT = 1
 AS
 BEGIN
-    IF NOT EXISTS (SELECT * FROM RemoteConfigurationSchema.Users WHERE UserId = @UserId)
+    IF NOT EXISTS (SELECT * FROM RemoteConfigurationSchema.Users WHERE UserId = @UserId AND Email = @Email AND ApiKey = @ApiKey)
     BEGIN
-        IF NOT EXISTS (SELECT * FROM RemoteConfigurationSchema.Users WHERE Email = @Email)
-        BEGIN
-			DECLARE @OutputUserId INT
+        DECLARE @OutputUserId INT
 
-			INSERT INTO RemoteConfigurationSchema.Users(
-				[Email],
-				[ApiKey],
-				[FirstName],
-				[LastName],
-				[Active]
-			) VALUES (
-				@Email,
-				@ApiKey,
-				@FirstName,
-				@LastName,
-				@Active
-			)
+        INSERT INTO RemoteConfigurationSchema.Users(
+            [Email],
+            [ApiKey],
+            [FirstName],
+            [LastName],
+            [Active]
+        ) VALUES (
+            @Email,
+            @ApiKey,
+            @FirstName,
+            @LastName,
+            @Active
+        )
 
-			SET @OutputUserId = @@IDENTITY
-        END
+        SET @OutputUserId = @@IDENTITY
     END
 END
 GO
@@ -143,5 +140,34 @@ BEGIN
                     PasswordSalt = @PasswordSalt
                 WHERE Email = @Email
         END
+END
+GO
+
+CREATE OR ALTER PROCEDURE RemoteConfigurationSchema.spConfiguration_Upsert
+  @ApiKey UNIQUEIDENTIFIER,
+  @KeyIdentifier NVARCHAR(50),
+  @ConfigData NVARCHAR(MAX)
+AS
+BEGIN
+    IF NOT EXISTS (SELECT * FROM RemoteConfigurationSchema.Configuration WHERE ApiKey = @ApiKey AND KeyIdentifier = @KeyIdentifier)
+    BEGIN
+        INSERT INTO RemoteConfigurationSchema.Configuration(
+            [ApiKey],
+            [KeyIdentifier],
+            [ConfigData]
+        ) VALUES (
+            @ApiKey,
+            @KeyIdentifier,
+            @ConfigData
+        )
+    END
+    ELSE
+    BEGIN
+        UPDATE RemoteConfigurationSchema.Configuration 
+            SET ApiKey = @ApiKey,
+                KeyIdentifier = @KeyIdentifier,
+                ConfigData = @ConfigData
+            WHERE ApiKey = @ApiKey AND KeyIdentifier = @KeyIdentifier
+    END
 END
 GO
